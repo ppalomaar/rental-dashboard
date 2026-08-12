@@ -1,327 +1,272 @@
-if (sessionStorage.getItem("rentalLoggedIn") !== "true") {
-  location.href = "index.html";
+if(!sessionStorage.ok)location="index.html";
+
+const SHEET_CSV_URL="https://docs.google.com/spreadsheets/d/1K0BwNSe0Q8b1wC5dNCQ_k5WeC2LmdJxk7GmTp9hZv-A/edit?usp=sharing";
+
+let charts=[];
+
+function parseCSV(text){
+  const rows=[];
+  let row=[];
+  let cell="";
+  let quote=false;
+
+  for(let i=0;i<text.length;i++){
+    const char=text[i];
+
+    if(char==='"'){
+      if(quote && text[i+1]==='"'){
+        cell+='"';
+        i++;
+      }else{
+        quote=!quote;
+      }
+    }else if(char===',' && !quote){
+      row.push(cell);
+      cell="";
+    }else if((char==='\n' || char==='\r') && !quote){
+      if(char==='\r' && text[i+1]==='\n')i++;
+      row.push(cell);
+      if(row.some(x=>x.trim()!==""))rows.push(row);
+      row=[];
+      cell="";
+    }else{
+      cell+=char;
+    }
+  }
+
+  if(cell!=="" || row.length){
+    row.push(cell);
+    rows.push(row);
+  }
+
+  const headers=rows.shift().map(x=>x.trim());
+
+  return rows.map(r=>{
+    const obj={};
+    headers.forEach((h,i)=>{
+      obj[h]=(r[i]||"").trim();
+    });
+    return obj;
+  });
 }
 
-// =====================================================
-// MASUKKAN URL GOOGLE SHEET CSV DI SINI
-// =====================================================
-const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1K0BwNSe0Q8b1wC5dNCQ_k5WeC2LmdJxk7GmTp9hZv-A/edit?usp=sharing";
+async function loadData(){
+  try{
+    if(!SHEET_CSV_URL.startsWith("http")){
+      throw new Error("URL Google Sheet belum diisi.");
+    }
 
-let charts = [];
-
-// =====================================================
-// LOAD DATA
-// =====================================================
-async function loadData() {
-  try {
-    const response = await fetch(
-      SHEET_CSV_URL + (SHEET_CSV_URL.includes("?") ? "&" : "?") + "_=" + Date.now()
+    const response=await fetch(
+      SHEET_CSV_URL+
+      (SHEET_CSV_URL.includes("?")?"&":"?")+
+      "_="+Date.now()
     );
 
-    if (!response.ok) {
-      throw new Error("Google Spreadsheet tidak bisa diakses.");
+    if(!response.ok){
+      throw new Error("Google Sheet tidak dapat diakses.");
     }
 
-    const text = await response.text();
-    const rows = parseCSV(text);
+    const text=await response.text();
+    const rows=parseCSV(text);
 
-    if (!rows.length) {
-      throw new Error("Data Google Spreadsheet kosong.");
+    if(!rows.length){
+      throw new Error("Data Google Sheet kosong.");
     }
+
+    console.log("Data berhasil dimuat:",rows.length,"baris");
 
     render(rows);
 
-    console.log("Data berhasil dimuat:", rows.length, "baris");
-
-  } catch (error) {
+  }catch(error){
     console.error(error);
+
     alert(
-      "Gagal mengambil data Google Spreadsheet.\n\n" +
-      "Pastikan Spreadsheet sudah dipublish sebagai CSV dan URL-nya benar."
+      "Gagal mengambil data Google Sheet.\n\n"+
+      "Pastikan Google Sheet sudah dipublish sebagai CSV dan URL-nya benar."
     );
   }
 }
 
-// =====================================================
-// CSV PARSER
-// Aman untuk data yang mempunyai koma di dalam cell
-// =====================================================
-function parseCSV(text) {
-  const lines = text.trim().split(/\r?\n/);
+function render(r){
 
-  if (lines.length < 2) {
-    return [];
-  }
+  const money=x=>
+    Number(String(x||"").replace(/[^\d]/g,""))||0;
 
-  const headers = parseCSVLine(lines[0]);
-
-  return lines
-    .slice(1)
-    .filter(line => line.trim() !== "")
-    .map(line => {
-      const values = parseCSVLine(line);
-      const obj = {};
-
-      headers.forEach((header, index) => {
-        obj[header.trim()] = (values[index] || "").trim();
-      });
-
-      return obj;
-    });
-}
-
-function parseCSVLine(line) {
-  const result = [];
-  let current = "";
-  let insideQuotes = false;
-
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-
-    if (char === '"' && line[i + 1] === '"') {
-      current += '"';
-      i++;
-    }
-
-    else if (char === '"') {
-      insideQuotes = !insideQuotes;
-    }
-
-    else if (char === "," && !insideQuotes) {
-      result.push(current);
-      current = "";
-    }
-
-    else {
-      current += char;
-    }
-  }
-
-  result.push(current);
-
-  return result;
-}
-
-// =====================================================
-// RENDER DASHBOARD
-// =====================================================
-function render(r) {
-
-  const money = x =>
-    Number(String(x || "").replace(/[^\d]/g, "")) || 0;
-
-  const total = r.reduce(
-    (a, b) => a + money(b["Total Harga Sewa (Rp.)"]),
+  const total=r.reduce(
+    (a,b)=>a+money(b["Total Harga Sewa (Rp.)"]),
     0
   );
 
-  const average = r.length ? total / r.length : 0;
+  k1.textContent=r.length;
 
-  const active = r.filter(
-    x => String(x["Status Sewa"] || "").trim().toLowerCase() === "aktif"
-  ).length;
+  k2.textContent=
+    "Rp "+(total/1e6).toFixed(1)+" jt";
 
-  // KPI
-  document.getElementById("k1").textContent =
-    r.length.toLocaleString("id-ID");
+  k3.textContent=
+    "Rp "+
+    (r.length?total/r.length/1e6:0).toFixed(1)+
+    " jt";
 
-  document.getElementById("k2").textContent =
-    "Rp " + (total / 1000000).toFixed(1) + " jt";
+  k4.textContent=
+    r.filter(
+      x=>String(x["Status Sewa"]).trim().toLowerCase()==="aktif"
+    ).length;
 
-  document.getElementById("k3").textContent =
-    "Rp " + (average / 1000000).toFixed(1) + " jt";
+  charts.forEach(c=>c.destroy());
+  charts=[];
 
-  document.getElementById("k4").textContent =
-    active.toLocaleString("id-ID");
+  const grp=(key,sum)=>{
+    let m={};
 
-  // Hapus chart lama
-  charts.forEach(chart => chart.destroy());
-  charts = [];
+    r.forEach(x=>{
+      let k=x[key]||"-";
 
-  // GROUPING
-  const group = (column, sumMoney = false) => {
-
-    const result = {};
-
-    r.forEach(row => {
-
-      const key = row[column] || "-";
-
-      if (!result[key]) {
-        result[key] = 0;
-      }
-
-      result[key] += sumMoney
-        ? money(row["Total Harga Sewa (Rp.)"])
-        : 1;
+      m[k]=(m[k]||0)+
+        (sum?money(x["Total Harga Sewa (Rp.)"]):1);
     });
 
-    return result;
+    return m;
   };
 
-  // CREATE CHART
-  const createChart = (id, type, data, options = {}) => {
+  const mk=(id,type,data,opt={})=>{
+    const canvas=document.getElementById(id);
 
-    const canvas = document.getElementById(id);
-
-    if (!canvas) {
-      console.warn("Canvas tidak ditemukan:", id);
-      return;
-    }
+    if(!canvas)return;
 
     charts.push(
-      new Chart(canvas, {
-        type: type,
-        data: data,
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          ...options
+      new Chart(canvas,{
+        type,
+        data,
+        options:{
+          responsive:true,
+          maintainAspectRatio:false,
+          ...opt
         }
       })
     );
   };
 
-  // ===================================================
-  // 1. TOTAL SEWA / REGIONAL OFFICE
-  // ===================================================
+  // 1. TOTAL HARGA SEWA PER REGIONAL OFFICE
+  let a=grp("Regional Office",1);
 
-  const regional = group("Regional Office", true);
-
-  createChart(
+  mk(
     "c1",
     "bar",
     {
-      labels: Object.keys(regional),
-      datasets: [
+      labels:Object.keys(a),
+      datasets:[
         {
-          data: Object.values(regional),
-          borderRadius: 8
+          data:Object.values(a),
+          borderRadius:8
         }
       ]
     },
     {
-      plugins: {
-        legend: {
-          display: false
+      plugins:{
+        legend:{
+          display:false
         }
       }
     }
   );
 
-  // ===================================================
   // 2. STATUS SEWA
-  // ===================================================
+  let s=grp("Status Sewa",0);
 
-  const status = group("Status Sewa");
-
-  createChart(
+  mk(
     "c2",
     "doughnut",
     {
-      labels: Object.keys(status),
-      datasets: [
+      labels:Object.keys(s),
+      datasets:[
         {
-          data: Object.values(status)
+          data:Object.values(s)
         }
       ]
     }
   );
 
-  // ===================================================
-  // 3. TOTAL SEWA / PROVINSI
-  // ===================================================
+  // 3. TOTAL HARGA SEWA PER PROVINSI
+  let p=grp("Nama Provinsi",1);
 
-  const province = group("Nama Provinsi", true);
-
-  createChart(
+  mk(
     "c3",
     "bar",
     {
-      labels: Object.keys(province),
-      datasets: [
+      labels:Object.keys(p),
+      datasets:[
         {
-          data: Object.values(province),
-          borderRadius: 8
+          data:Object.values(p),
+          borderRadius:8
         }
       ]
     },
     {
-      plugins: {
-        legend: {
-          display: false
+      plugins:{
+        legend:{
+          display:false
         }
       }
     }
   );
 
-  // ===================================================
   // 4. JENIS KANTOR
-  // ===================================================
+  let j=grp("Status Kantor / Jenis Uker",0);
 
-  const officeType = group("Status Kantor / Jenis Uker");
-
-  createChart(
+  mk(
     "c4",
     "pie",
     {
-      labels: Object.keys(officeType),
-      datasets: [
+      labels:Object.keys(j),
+      datasets:[
         {
-          data: Object.values(officeType)
+          data:Object.values(j)
         }
       ]
     }
   );
 
-  // ===================================================
-  // 5. TOP 10 KANTOR
-  // ===================================================
+  // 5. TOP 10 KANTOR BERDASARKAN HARGA SEWA
+  let top=[
+    ...r
+  ]
+  .sort(
+    (x,y)=>
+      money(y["Total Harga Sewa (Rp.)"])-
+      money(x["Total Harga Sewa (Rp.)"])
+  )
+  .slice(0,10);
 
-  const top = [...r]
-    .sort(
-      (a, b) =>
-        money(b["Total Harga Sewa (Rp.)"]) -
-        money(a["Total Harga Sewa (Rp.)"])
-    )
-    .slice(0, 10);
-
-  createChart(
+  mk(
     "c5",
     "bar",
     {
-      labels: top.map(
-        x => x["Nama Kantor Unit Kerja"] || "-"
+      labels:top.map(
+        x=>x["Nama Kantor Unit Kerja"]
       ),
-      datasets: [
+      datasets:[
         {
-          data: top.map(
-            x => money(x["Total Harga Sewa (Rp.)"])
+          data:top.map(
+            x=>money(x["Total Harga Sewa (Rp.)"])
           ),
-          borderRadius: 8
+          borderRadius:8
         }
       ]
     },
     {
-      indexAxis: "y",
-      plugins: {
-        legend: {
-          display: false
+      indexAxis:"y",
+      plugins:{
+        legend:{
+          display:false
         }
       }
     }
   );
 }
 
-// =====================================================
-// LOGOUT
-// =====================================================
-function logout() {
-  sessionStorage.removeItem("rentalLoggedIn");
-  location.href = "index.html";
+function logout(){
+  sessionStorage.clear();
+  location="index.html";
 }
 
-// =====================================================
-// JALANKAN
-// =====================================================
 loadData();
