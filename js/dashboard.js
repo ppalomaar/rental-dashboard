@@ -1,6 +1,6 @@
 if(!sessionStorage.ok)location="index.html";
 
-const SHEET_CSV_URL="https://docs.google.com/spreadsheets/d/1K0BwNSe0Q8b1wC5dNCQ_k5WeC2LmdJxk7GmTp9hZv-A/edit?usp=sharing";
+const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1K0BwNSe0Q8b1wC5dNCQ_k5WeC2LmdJxk7GmTp9hZv-A/export?format=csv&gid=360082926";
 
 let charts=[];
 
