@@ -1,0 +1,1 @@
+function login(){if(u.value==="admin"&&p.value==="admin123"){sessionStorage.ok=1;location="dashboard.html"}else alert("Login gagal")}
