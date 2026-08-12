@@ -1,8 +1,15 @@
-# rental-dashboard
-trial dashboard rental
+# Google Spreadsheet Version
 
-1. Buat Google Sheet.
-2. File -> Share -> Publish to web.
-3. Ambil URL CSV.
-4. Tempel ke SHEET_URL pada app.js.
-5. Deploy folder ke Vercel.
+1. Publish Google Sheet sebagai CSV.
+2. Salin URL CSV.
+3. Buka `js/dashboard.js`.
+4. Ganti:
+
+```js
+const SHEET_CSV_URL = "PASTE_GOOGLE_SHEET_CSV_URL_DI_SINI";
+```
+
+Format URL CSV:
+`https://docs.google.com/spreadsheets/d/.../export?format=csv&gid=0`
+
+Setelah data di spreadsheet bertambah, klik **Refresh Data** di dashboard.
