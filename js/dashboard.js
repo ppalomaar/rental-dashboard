@@ -1,5 +1,5 @@
 if(!sessionStorage.ok)location="index.html";
-const SHEET_CSV_URL="PASTE_GOOGLE_SHEET_CSV_URL_DI_SINI";
+const SHEET_CSV_URL="https://docs.google.com/spreadsheets/d/1K0BwNSe0Q8b1wC5dNCQ_k5WeC2LmdJxk7GmTp9hZv-A/edit?usp=sharing";
 let charts=[];
 const dummy=`Regional Office,Nama Kantor Unit Kerja,Status Kantor / Jenis Uker,Status Sewa,Total Harga Sewa (Rp.),Nama Provinsi
 RO Surabaya,KCP Darmo,KCP,Aktif,120000000,Jawa Timur
